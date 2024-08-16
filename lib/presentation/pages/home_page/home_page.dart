@@ -5,13 +5,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_recruitment_task/models/products_page.dart';
 import 'package:flutter_recruitment_task/presentation/pages/home_page/home_cubit.dart';
 import 'package:flutter_recruitment_task/presentation/widgets/big_text.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../utils/extensions/color_extension.dart';
 
 const _mainPadding = EdgeInsets.all(16.0);
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  HomePage({super.key, this.productId});
+
+  final String? productId;
+
+  final ItemScrollController itemScrollController = ItemScrollController();
+
+  final ItemPositionsListener itemPositionsListener = ItemPositionsListener.create();
 
   @override
   Widget build(BuildContext context) {
@@ -21,42 +28,51 @@ class HomePage extends StatelessWidget {
       ),
       body: Padding(
         padding: _mainPadding,
-        child: BlocBuilder<HomeCubit, HomeState>(
+        child: BlocConsumer<HomeCubit, HomeState>(
+          listener: (context, state) async {
+            if (state is Loaded && productId != null) {
+              await scrollToProduct(context);
+            }
+          },
           builder: (context, state) {
             return switch (state) {
               Error() => BigText('Error: ${state.error}'),
               Loading() => const BigText('Loading...'),
-              Loaded() => _LoadedWidget(state: state),
+              Loaded() => _LoadedWidget(state: state, itemScrollController: itemScrollController,
+                itemPositionsListener: itemPositionsListener,),
             };
           },
         ),
       ),
     );
   }
+
+  Future<void> scrollToProduct(BuildContext context) async {
+    final cubit = context.read<HomeCubit>();
+    final index = await cubit.findProductIndexById(productId!);
+    if (index != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        itemScrollController.scrollTo(
+          index: index,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
 }
 
 class _LoadedWidget extends StatelessWidget {
   const _LoadedWidget({
-    required this.state,
+    required this.state, required this.itemScrollController, required this.itemPositionsListener,
   });
 
   final Loaded state;
 
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        _ProductsSliverList(state: state),
-        const _GetNextPageButton(),
-      ],
-    );
-  }
-}
+  final ItemScrollController itemScrollController;
 
-class _ProductsSliverList extends StatelessWidget {
-  const _ProductsSliverList({required this.state});
-
-  final Loaded state;
+  final ItemPositionsListener itemPositionsListener;
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +81,22 @@ class _ProductsSliverList extends StatelessWidget {
         .expand((product) => product)
         .toList();
 
-    return SliverList.separated(
-      itemCount: products.length,
-      itemBuilder: (context, index) => _ProductCard(products[index]),
-      separatorBuilder: (context, index) => const Divider(),
+    return ScrollablePositionedList.builder(
+      itemCount: products.length + (state.hasMorePages ? 1 : 0),
+      itemScrollController: itemScrollController,
+      itemPositionsListener: itemPositionsListener,
+      itemBuilder: (context, index) {
+        if (index < products.length) {
+          final product = products[index];
+          return _ProductCard( product);
+        } else {
+          return const _GetNextPageButton();
+        }
+      },
     );
   }
 }
+
 
 class _ProductCard extends StatelessWidget {
   const _ProductCard(this.product);
@@ -129,11 +154,9 @@ class _GetNextPageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: TextButton(
-        onPressed: context.read<HomeCubit>().getNextPage,
-        child: const BigText('Get next page'),
-      ),
+    return TextButton(
+      onPressed: context.read<HomeCubit>().getNextPage,
+      child: const BigText('Get next page'),
     );
   }
 }

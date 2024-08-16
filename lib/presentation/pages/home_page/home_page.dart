@@ -6,6 +6,8 @@ import 'package:flutter_recruitment_task/models/products_page.dart';
 import 'package:flutter_recruitment_task/presentation/pages/home_page/home_cubit.dart';
 import 'package:flutter_recruitment_task/presentation/widgets/big_text.dart';
 
+import '../../../utils/extensions/color_extension.dart';
+
 const _mainPadding = EdgeInsets.all(16.0);
 
 class HomePage extends StatelessWidget {
@@ -112,13 +114,10 @@ class _TagWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const possibleColors = Colors.primaries;
-    final color = possibleColors[Random().nextInt(possibleColors.length)];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Chip(
-        color: MaterialStateProperty.all(color),
+        color: MaterialStateProperty.all(HexColor.fromHex(tag.color)),
         label: Text(tag.label),
       ),
     );

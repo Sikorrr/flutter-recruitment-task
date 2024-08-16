@@ -8,6 +8,7 @@ import 'package:flutter_recruitment_task/presentation/widgets/big_text.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../utils/extensions/color_extension.dart';
+import '../filter_page/filter_page.dart';
 
 const _mainPadding = EdgeInsets.all(16.0);
 
@@ -25,6 +26,12 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const BigText('Products'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () => _navigateToFilterPage(context),
+          ),
+        ],
       ),
       body: Padding(
         padding: _mainPadding,
@@ -38,6 +45,7 @@ class HomePage extends StatelessWidget {
             return switch (state) {
               Error() => BigText('Error: ${state.error}'),
               Loading() => const BigText('Loading...'),
+              NoFilteredResults() => const BigText('No products found'),
               Loaded() => _LoadedWidget(state: state, itemScrollController: itemScrollController,
                 itemPositionsListener: itemPositionsListener,),
             };
@@ -59,6 +67,15 @@ class HomePage extends StatelessWidget {
         );
       });
     }
+  }
+
+  void _navigateToFilterPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FilterPage(),
+      ),
+    );
   }
 
 }
